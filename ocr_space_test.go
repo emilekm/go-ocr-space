@@ -1,12 +1,16 @@
 package ocr_space
 
-import "testing"
+import (
+	"testing"
+)
 
-func (ocr OCRText) TestJustText(t *testing.T) {
-	want := "hello world"
+func TestJustText(t *testing.T) {
+	var ocr OCRText
+	want := "helloworld"
 	ocr.IsErroredOnProcessing = true
 	ocr.ErrorMessage = []string{"hello", "world"}
-	if got := ocr.JustText(); got != want {
-		t.Errorf("Hello() = %q, want %q", got, want)
+	got := ocr.JustText()
+	if got != want {
+		t.Errorf("JustText() = %q, want %q", got, want)
 	}
 }
