@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -25,8 +24,7 @@ func InitAPI(apiKey string, language string, options ApiOptions) OCRSpaceAPI {
 	}
 }
 
-func (c OCRSpaceAPI) ParseFromUrl(fileUrl string) (OCRText, error) {
-	var results OCRText
+func (c OCRSpaceAPI) ParseFromUrl(fileUrl string) (*OCRText, error) {
 	var resp, err = http.PostForm(c.options.Url,
 		url.Values{
 			"url":                          {fileUrl},
@@ -38,25 +36,13 @@ func (c OCRSpaceAPI) ParseFromUrl(fileUrl string) (OCRText, error) {
 		},
 	)
 	if err != nil {
-		return results, err
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return results, err
+		return nil, err
 	}
 
-	err = json.Unmarshal(body, &results)
-	if err != nil {
-		return results, err
-	}
-
-	return results, nil
+	return unmarshalResponse(resp)
 }
 
-func (c OCRSpaceAPI) ParseFromBase64(baseString string) (OCRText, error) {
-	var results OCRText
+func (c OCRSpaceAPI) ParseFromBase64(baseString string) (*OCRText, error) {
 	resp, err := http.PostForm(c.options.Url,
 		url.Values{
 			"base64Image":                  {baseString},
@@ -68,25 +54,13 @@ func (c OCRSpaceAPI) ParseFromBase64(baseString string) (OCRText, error) {
 		},
 	)
 	if err != nil {
-		return results, err
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return results, err
+		return nil, err
 	}
 
-	err = json.Unmarshal(body, &results)
-	if err != nil {
-		return results, err
-	}
-
-	return results, nil
+	return unmarshalResponse(resp)
 }
 
-func (c OCRSpaceAPI) ParseFromLocal(localPath string) (OCRText, error) {
-	var results OCRText
+func (c OCRSpaceAPI) ParseFromLocal(localPath string) (*OCRText, error) {
 	params := map[string]string{
 		"language":                     c.language,
 		"apikey":                       c.apiKey,
@@ -97,7 +71,7 @@ func (c OCRSpaceAPI) ParseFromLocal(localPath string) (OCRText, error) {
 
 	file, err := os.Open(localPath)
 	if err != nil {
-		return results, err
+		return nil, err
 	}
 	defer file.Close()
 
@@ -106,7 +80,7 @@ func (c OCRSpaceAPI) ParseFromLocal(localPath string) (OCRText, error) {
 
 	part, err := writer.CreateFormFile("file", filepath.Base(localPath))
 	if err != nil {
-		return results, err
+		return nil, err
 	}
 	_, err = io.Copy(part, file)
 
@@ -115,7 +89,7 @@ func (c OCRSpaceAPI) ParseFromLocal(localPath string) (OCRText, error) {
 	}
 	err = writer.Close()
 	if err != nil {
-		return results, err
+		return nil, err
 	}
 
 	req, err := http.NewRequest("POST", c.options.Url, body)
@@ -124,22 +98,7 @@ func (c OCRSpaceAPI) ParseFromLocal(localPath string) (OCRText, error) {
 	client := &http.Client{}
 	response, err := client.Do(req)
 
-	if err != nil {
-		log.Fatal(err)
-	} else {
-		body := &bytes.Buffer{}
-		_, err := body.ReadFrom(response.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		response.Body.Close()
-		err = json.Unmarshal(body.Bytes(), &results)
-		if err != nil {
-			return results, err
-		}
-	}
-
-	return results, nil
+	return unmarshalResponse(response)
 }
 
 func (ocr OCRText) JustText() string {
@@ -154,4 +113,21 @@ func (ocr OCRText) JustText() string {
 		}
 	}
 	return text
+}
+
+func unmarshalResponse(res *http.Response) (*OCRText, error) {
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var result OCRText
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
