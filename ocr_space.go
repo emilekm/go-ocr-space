@@ -83,6 +83,9 @@ func (c OCRSpaceAPI) ParseFromLocal(localPath string) (*OCRText, error) {
 		return nil, err
 	}
 	_, err = io.Copy(part, file)
+	if err != nil {
+		return nil, err
+	}
 
 	for key, val := range params {
 		_ = writer.WriteField(key, val)
@@ -93,10 +96,16 @@ func (c OCRSpaceAPI) ParseFromLocal(localPath string) (*OCRText, error) {
 	}
 
 	req, err := http.NewRequest("POST", c.options.Url, body)
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	client := &http.Client{}
 	response, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
 
 	return unmarshalResponse(response)
 }
