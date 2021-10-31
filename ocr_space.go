@@ -13,24 +13,28 @@ import (
 	"path/filepath"
 )
 
-func InitConfig(apiKey string, language string) Config {
-	var config Config
-	config.ApiKey = apiKey
-	config.Language = language
-	config.Url = "https://api.ocr.space/parse/image"
-	return config
+func InitAPI(apiKey string, language string, options ApiOptions) OCRSpaceAPI {
+	if options.Url == "" {
+		options.Url = ocrDefaultUrl
+	}
+
+	return OCRSpaceAPI{
+		apiKey:   apiKey,
+		language: language,
+		options:  options,
+	}
 }
 
-func (c Config) ParseFromUrl(fileUrl string) (OCRText, error) {
+func (c OCRSpaceAPI) ParseFromUrl(fileUrl string) (OCRText, error) {
 	var results OCRText
-	var resp, err = http.PostForm(c.Url,
+	var resp, err = http.PostForm(c.options.Url,
 		url.Values{
 			"url":                          {fileUrl},
-			"language":                     {c.Language},
-			"apikey":                       {c.ApiKey},
+			"language":                     {c.language},
+			"apikey":                       {c.apiKey},
 			"isOverlayRequired":            {"true"},
 			"isSearchablePdfHideTextLayer": {"true"},
-			"scale": {"true"},
+			"scale":                        {"true"},
 		},
 	)
 	if err != nil {
@@ -51,16 +55,16 @@ func (c Config) ParseFromUrl(fileUrl string) (OCRText, error) {
 	return results, nil
 }
 
-func (c Config) ParseFromBase64(baseString string) (OCRText, error) {
+func (c OCRSpaceAPI) ParseFromBase64(baseString string) (OCRText, error) {
 	var results OCRText
-	resp, err := http.PostForm("https://api.ocr.space/parse/image",
+	resp, err := http.PostForm(c.options.Url,
 		url.Values{
 			"base64Image":                  {baseString},
-			"language":                     {c.Language},
-			"apikey":                       {c.ApiKey},
+			"language":                     {c.language},
+			"apikey":                       {c.apiKey},
 			"isOverlayRequired":            {"true"},
 			"isSearchablePdfHideTextLayer": {"true"},
-			"scale": {"true"},
+			"scale":                        {"true"},
 		},
 	)
 	if err != nil {
@@ -81,14 +85,14 @@ func (c Config) ParseFromBase64(baseString string) (OCRText, error) {
 	return results, nil
 }
 
-func (c Config) ParseFromLocal(localPath string) (OCRText, error) {
+func (c OCRSpaceAPI) ParseFromLocal(localPath string) (OCRText, error) {
 	var results OCRText
 	params := map[string]string{
-		"language":                     c.Language,
-		"apikey":                       c.ApiKey,
+		"language":                     c.language,
+		"apikey":                       c.apiKey,
 		"isOverlayRequired":            "true",
 		"isSearchablePdfHideTextLayer": "true",
-		"scale": "true",
+		"scale":                        "true",
 	}
 
 	file, err := os.Open(localPath)
@@ -114,7 +118,7 @@ func (c Config) ParseFromLocal(localPath string) (OCRText, error) {
 		return results, err
 	}
 
-	req, err := http.NewRequest("POST", c.Url, body)
+	req, err := http.NewRequest("POST", c.options.Url, body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	client := &http.Client{}

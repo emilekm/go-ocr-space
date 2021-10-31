@@ -1,5 +1,9 @@
 package ocr_space
 
+const (
+	ocrDefaultUrl = "https://api.ocr.space/parse/image"
+)
+
 type OCRText struct {
 	ParsedResults []struct {
 		TextOverlay struct {
@@ -34,9 +38,12 @@ type OCRText struct {
 	ProcessingTimeInMilliseconds string   `json:"ProcessingTimeInMilliseconds"`
 	SearchablePDFURL             string   `json:"SearchablePDFURL"`
 }
+type OCRSpaceAPI struct {
+	apiKey   string
+	language string
+	options  ApiOptions
+}
 
-type Config struct {
-	ApiKey   string
-	Language string
-	Url      string
+type ApiOptions struct {
+	Url string
 }
