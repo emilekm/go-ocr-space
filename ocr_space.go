@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func InitAPI(apiKey string, language string, options ApiOptions) OCRSpaceAPI {
@@ -24,12 +25,11 @@ func InitAPI(apiKey string, language string, options ApiOptions) OCRSpaceAPI {
 	}
 }
 
-func (c OCRSpaceAPI) ParseFromUrl(fileUrl string) (*OCRText, error) {
-	var resp, err = http.PostForm(c.options.Url,
+func (a *OCRSpaceAPI) ParseFromUrl(fileUrl string) (*OCRText, error) {
+	var resp, err = a.postRequest(
 		url.Values{
 			"url":                          {fileUrl},
-			"language":                     {c.language},
-			"apikey":                       {c.apiKey},
+			"language":                     {a.language},
 			"isOverlayRequired":            {"true"},
 			"isSearchablePdfHideTextLayer": {"true"},
 			"scale":                        {"true"},
@@ -42,12 +42,11 @@ func (c OCRSpaceAPI) ParseFromUrl(fileUrl string) (*OCRText, error) {
 	return unmarshalResponse(resp)
 }
 
-func (c OCRSpaceAPI) ParseFromBase64(baseString string) (*OCRText, error) {
-	resp, err := http.PostForm(c.options.Url,
+func (a *OCRSpaceAPI) ParseFromBase64(baseString string) (*OCRText, error) {
+	resp, err := a.postRequest(
 		url.Values{
 			"base64Image":                  {baseString},
-			"language":                     {c.language},
-			"apikey":                       {c.apiKey},
+			"language":                     {a.language},
 			"isOverlayRequired":            {"true"},
 			"isSearchablePdfHideTextLayer": {"true"},
 			"scale":                        {"true"},
@@ -60,10 +59,9 @@ func (c OCRSpaceAPI) ParseFromBase64(baseString string) (*OCRText, error) {
 	return unmarshalResponse(resp)
 }
 
-func (c OCRSpaceAPI) ParseFromLocal(localPath string) (*OCRText, error) {
+func (a *OCRSpaceAPI) ParseFromLocal(localPath string) (*OCRText, error) {
 	params := map[string]string{
-		"language":                     c.language,
-		"apikey":                       c.apiKey,
+		"language":                     a.language,
 		"isOverlayRequired":            "true",
 		"isSearchablePdfHideTextLayer": "true",
 		"scale":                        "true",
@@ -95,19 +93,42 @@ func (c OCRSpaceAPI) ParseFromLocal(localPath string) (*OCRText, error) {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", c.options.Url, body)
+	req, err := a.preparePostRequest(body)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	client := &http.Client{}
-	response, err := client.Do(req)
+	res, err := a.sendRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	return unmarshalResponse(response)
+	return unmarshalResponse(res)
+}
+
+func (a *OCRSpaceAPI) preparePostRequest(body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequest("POST", ocrDefaultUrl, body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("apikey", a.apiKey)
+
+	return req, nil
+}
+
+func (a *OCRSpaceAPI) sendRequest(req *http.Request) (*http.Response, error) {
+	return http.DefaultClient.Do(req)
+}
+
+func (a *OCRSpaceAPI) postRequest(values url.Values) (*http.Response, error) {
+	req, err := a.preparePostRequest(strings.NewReader(values.Encode()))
+	if err != nil {
+		return nil, err
+	}
+
+	return a.sendRequest(req)
 }
 
 func (ocr OCRText) JustText() string {
