@@ -1,5 +1,7 @@
 package ocr_space
 
+import "net/http"
+
 const (
 	ocrDefaultUrl = "https://api.ocr.space/parse/image"
 )
@@ -45,5 +47,6 @@ type OCRSpaceAPI struct {
 }
 
 type ApiOptions struct {
-	Url string
+	Url        string
+	HTTPClient *http.Client
 }

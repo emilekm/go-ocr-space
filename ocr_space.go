@@ -18,6 +18,10 @@ func InitAPI(apiKey string, language string, options ApiOptions) OCRSpaceAPI {
 		options.Url = ocrDefaultUrl
 	}
 
+	if options.HTTPClient == nil {
+		options.HTTPClient = http.DefaultClient
+	}
+
 	return OCRSpaceAPI{
 		apiKey:   apiKey,
 		language: language,
@@ -119,7 +123,7 @@ func (a *OCRSpaceAPI) preparePostRequest(body io.Reader) (*http.Request, error) 
 }
 
 func (a *OCRSpaceAPI) sendRequest(req *http.Request) (*http.Response, error) {
-	return http.DefaultClient.Do(req)
+	return a.options.HTTPClient.Do(req)
 }
 
 func (a *OCRSpaceAPI) postRequest(values url.Values) (*http.Response, error) {
