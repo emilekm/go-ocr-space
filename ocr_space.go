@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/google/go-querystring/query"
 )
 
 func InitAPI(apiKey string, language string, options ApiOptions) OCRSpaceAPI {
@@ -23,54 +25,44 @@ func InitAPI(apiKey string, language string, options ApiOptions) OCRSpaceAPI {
 	}
 
 	return OCRSpaceAPI{
-		apiKey:   apiKey,
-		language: language,
-		options:  options,
+		apiKey:  apiKey,
+		options: options,
 	}
 }
 
-func (a *OCRSpaceAPI) ParseFromUrl(fileUrl string) (*OCRText, error) {
-	var resp, err = a.postRequest(
-		url.Values{
-			"url":                          {fileUrl},
-			"language":                     {a.language},
-			"isOverlayRequired":            {"true"},
-			"isSearchablePdfHideTextLayer": {"true"},
-			"scale":                        {"true"},
-		},
-	)
+func (a *OCRSpaceAPI) ParseFromUrl(fileUrl string, params Params) (*OCRText, error) {
+	values, err := query.Values(params)
 	if err != nil {
 		return nil, err
 	}
 
-	return unmarshalResponse(resp)
-}
+	values.Add("url", fileUrl)
 
-func (a *OCRSpaceAPI) ParseFromBase64(baseString string) (*OCRText, error) {
-	resp, err := a.postRequest(
-		url.Values{
-			"base64Image":                  {baseString},
-			"language":                     {a.language},
-			"isOverlayRequired":            {"true"},
-			"isSearchablePdfHideTextLayer": {"true"},
-			"scale":                        {"true"},
-		},
-	)
+	res, err := a.postRequest(values)
 	if err != nil {
 		return nil, err
 	}
 
-	return unmarshalResponse(resp)
+	return unmarshalResponse(res)
 }
 
-func (a *OCRSpaceAPI) ParseFromLocal(localPath string) (*OCRText, error) {
-	params := map[string]string{
-		"language":                     a.language,
-		"isOverlayRequired":            "true",
-		"isSearchablePdfHideTextLayer": "true",
-		"scale":                        "true",
+func (a *OCRSpaceAPI) ParseFromBase64(baseString string, params Params) (*OCRText, error) {
+	values, err := query.Values(params)
+	if err != nil {
+		return nil, err
 	}
 
+	values.Add("base64Image", baseString)
+
+	res, err := a.postRequest(values)
+	if err != nil {
+		return nil, err
+	}
+
+	return unmarshalResponse(res)
+}
+
+func (a *OCRSpaceAPI) ParseFromLocal(localPath string, params Params) (*OCRText, error) {
 	file, err := os.Open(localPath)
 	if err != nil {
 		return nil, err
@@ -89,8 +81,17 @@ func (a *OCRSpaceAPI) ParseFromLocal(localPath string) (*OCRText, error) {
 		return nil, err
 	}
 
-	for key, val := range params {
-		_ = writer.WriteField(key, val)
+	values, err := query.Values(params)
+	if err != nil {
+		return nil, err
+	}
+	for key, val := range values {
+		for _, v := range val {
+			err = writer.WriteField(key, v)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 	err = writer.Close()
 	if err != nil {
