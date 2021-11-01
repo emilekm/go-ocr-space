@@ -78,14 +78,13 @@ func (a *OCRSpaceAPI) ParseFromLocal(file File, params Params) (*OCRText, error)
 	if err != nil {
 		return nil, err
 	}
-	for key, val := range values {
-		for _, v := range val {
-			err = writer.WriteField(key, v)
-			if err != nil {
-				return nil, err
-			}
+	for key := range values {
+		err = writer.WriteField(key, values.Get(key))
+		if err != nil {
+			return nil, err
 		}
 	}
+
 	err = writer.Close()
 	if err != nil {
 		return nil, err
