@@ -8,8 +8,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/google/go-querystring/query"
@@ -62,21 +60,16 @@ func (a *OCRSpaceAPI) ParseFromBase64(baseString string, params Params) (*OCRTex
 	return unmarshalResponse(res)
 }
 
-func (a *OCRSpaceAPI) ParseFromLocal(localPath string, params Params) (*OCRText, error) {
-	file, err := os.Open(localPath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
+func (a *OCRSpaceAPI) ParseFromLocal(file File, params Params) (*OCRText, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	part, err := writer.CreateFormFile("file", filepath.Base(localPath))
+	part, err := writer.CreateFormFile("file", file.Name)
 	if err != nil {
 		return nil, err
 	}
-	_, err = io.Copy(part, file)
+
+	_, err = part.Write(file.Content)
 	if err != nil {
 		return nil, err
 	}
@@ -102,6 +95,7 @@ func (a *OCRSpaceAPI) ParseFromLocal(localPath string, params Params) (*OCRText,
 	if err != nil {
 		return nil, err
 	}
+
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	res, err := a.sendRequest(req)

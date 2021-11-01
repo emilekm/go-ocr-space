@@ -1,6 +1,8 @@
 package ocr_space
 
-import "net/http"
+import (
+	"net/http"
+)
 
 const (
 	ocrDefaultUrl = "https://api.ocr.space/parse/image"
@@ -140,4 +142,9 @@ type Params struct {
 	// OCR engine version: 1 or 2
 	// Default = 1
 	OCREngine *OCREngineVer `url:"OCREngine,omitempty"`
+}
+
+type File struct {
+	Name    string
+	Content []byte
 }
