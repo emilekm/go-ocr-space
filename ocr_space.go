@@ -13,7 +13,7 @@ import (
 	"github.com/google/go-querystring/query"
 )
 
-func InitAPI(apiKey string, language string, options ApiOptions) OCRSpaceAPI {
+func InitAPI(apiKey string, options ApiOptions) OCRSpaceAPI {
 	if options.Url == "" {
 		options.Url = ocrDefaultUrl
 	}
